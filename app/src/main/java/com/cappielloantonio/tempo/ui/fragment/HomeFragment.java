@@ -117,6 +117,22 @@ public class HomeFragment extends Fragment {
         
         // 设置点击事件，跳转到音乐标签页并触发随机播放
         fabShuffleAll.setOnClickListener(v -> {
+            // 点击动画效果
+            fabShuffleAll.animate()
+                    .scaleX(0.9f)
+                    .scaleY(0.9f)
+                    .alpha(1.0f)
+                    .setDuration(150)
+                    .withEndAction(() -> {
+                        fabShuffleAll.animate()
+                                .scaleX(1.0f)
+                                .scaleY(1.0f)
+                                .alpha(0.7f)
+                                .setDuration(150)
+                                .start();
+                    })
+                    .start();
+            
             // 确保当前显示的是音乐标签页
             if (bind.homeViewPager.getCurrentItem() != 0) {
                 bind.homeViewPager.setCurrentItem(0, true);

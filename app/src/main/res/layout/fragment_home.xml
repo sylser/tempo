@@ -40,7 +40,8 @@
         app:fabCustomSize="100dp"
         app:fabSize="auto"
         app:maxImageSize="48dp"
-        app:rippleColor="#A2FFFFFF" />
+        app:rippleColor="?attr/colorSecondary"
+        app:useCompatPadding="true" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
