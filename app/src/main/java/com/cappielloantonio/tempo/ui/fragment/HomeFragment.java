@@ -17,6 +17,7 @@ import com.cappielloantonio.tempo.ui.fragment.pager.HomePager;
 import com.cappielloantonio.tempo.util.Preferences;
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
@@ -32,6 +33,10 @@ public class HomeFragment extends Fragment {
     private MaterialToolbar materialToolbar;
     private AppBarLayout appBarLayout;
     private TabLayout tabLayout;
+    private FloatingActionButton fabShuffleAll;
+    
+    private int lastScrollY = 0;
+    private final int HIDE_THRESHOLD = 10;
 
     @Nullable
     @Override
@@ -47,6 +52,7 @@ public class HomeFragment extends Fragment {
 
         initAppBar();
         initHomePager();
+        initFloatingActionButton();
     }
 
     @Override
@@ -100,5 +106,54 @@ public class HomeFragment extends Fragment {
         ).attach();
 
         tabLayout.setVisibility(Preferences.isPodcastSectionVisible() || Preferences.isRadioSectionVisible() ? View.VISIBLE : View.GONE);
+    }
+
+    private void initFloatingActionButton() {
+        // 初始化悬浮按钮
+        fabShuffleAll = bind.fabShuffleAll;
+        fabShuffleAll.show();
+        // 设置初始透明度
+        fabShuffleAll.setAlpha(0.7f);
+        
+        // 设置点击事件，跳转到音乐标签页并触发随机播放
+        fabShuffleAll.setOnClickListener(v -> {
+            // 确保当前显示的是音乐标签页
+            if (bind.homeViewPager.getCurrentItem() != 0) {
+                bind.homeViewPager.setCurrentItem(0, true);
+            }
+            
+            // 获取当前显示的Fragment
+            HomeTabMusicFragment musicFragment = (HomeTabMusicFragment) getChildFragmentManager()
+                    .findFragmentByTag("f0");
+            
+            // 调用音乐Fragment中的随机播放方法
+            if (musicFragment != null) {
+                musicFragment.triggerShuffleAll();
+            }
+        });
+    }
+    
+    /**
+     * 处理滚动事件，用于控制悬浮按钮的显示和隐藏
+     * @param scrollY 当前滚动位置
+     */
+    public void onScroll(int scrollY) {
+        // 上划隐藏按钮
+        if (scrollY > lastScrollY + HIDE_THRESHOLD) {
+            fabShuffleAll.hide();
+        } 
+        // 下滑显示按钮
+        else if (scrollY < lastScrollY - HIDE_THRESHOLD) {
+            fabShuffleAll.show();
+            fabShuffleAll.setAlpha(0.7f);
+        }
+        
+        // 触顶显示按钮
+        if (scrollY == 0) {
+            fabShuffleAll.show();
+            fabShuffleAll.setAlpha(0.7f);
+        }
+        
+        lastScrollY = scrollY;
     }
 }

@@ -13,6 +13,7 @@ import android.widget.PopupMenu;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.view.ViewCompat;
+import androidx.core.widget.NestedScrollView;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
@@ -162,15 +163,16 @@ public class HomeTabMusicFragment extends Fragment implements ClickCallback {
             return true;
         });
 
-        bind.discoveryTextViewClickable.setOnClickListener(v -> {
-            homeViewModel.getRandomShuffleSample().observe(getViewLifecycleOwner(), songs -> {
-                MusicUtil.ratingFilter(songs);
-
-                if (!songs.isEmpty()) {
-                    MediaManager.startQueue(mediaBrowserListenableFuture, songs, 0);
-                    activity.setBottomSheetInPeek(true);
-                }
-            });
+        // 隐藏原来的"全部随机播放"文本按钮
+        bind.discoveryTextViewClickable.setVisibility(View.GONE);
+        
+        // 设置滚动监听，将事件传递给HomeFragment
+        bind.fragmentHomeNestedScrollView.setOnScrollChangeListener((NestedScrollView.OnScrollChangeListener) (v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+            // 获取父Fragment并传递滚动事件
+            HomeFragment homeFragment = (HomeFragment) getParentFragment();
+            if (homeFragment != null) {
+                homeFragment.onScroll(scrollY);
+            }
         });
 
         bind.similarTracksTextViewRefreshable.setOnLongClickListener(v -> {
@@ -870,6 +872,21 @@ public class HomeTabMusicFragment extends Fragment implements ClickCallback {
 
     private void releaseMediaBrowser() {
         MediaBrowser.releaseFuture(mediaBrowserListenableFuture);
+    }
+
+    /**
+     * 触发全部随机播放功能
+     * 供HomeFragment的悬浮按钮调用
+     */
+    public void triggerShuffleAll() {
+        homeViewModel.getRandomShuffleSample().observe(getViewLifecycleOwner(), songs -> {
+            MusicUtil.ratingFilter(songs);
+
+            if (!songs.isEmpty()) {
+                MediaManager.startQueue(mediaBrowserListenableFuture, songs, 0);
+                activity.setBottomSheetInPeek(true);
+            }
+        });
     }
 
     @Override

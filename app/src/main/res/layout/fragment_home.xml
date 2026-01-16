@@ -18,5 +18,29 @@
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
+    <!-- 悬浮随机播放按钮 -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_shuffle_all"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="180dp"
+        android:alpha="0.7"
+        android:clickable="true"
+        android:focusable="true"
+        android:src="@drawable/ic_shuffle"
+        android:tint="?attr/colorOnSurface"
+        android:visibility="visible"
+        app:backgroundTint="#F5F5F5"
+        app:contentDescription="@string/home_title_discovery_shuffle_all_button"
+        app:elevation="8dp"
+        app:fabCustomSize="100dp"
+        app:fabSize="auto"
+        app:maxImageSize="48dp"
+        app:rippleColor="#A2FFFFFF" />
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
