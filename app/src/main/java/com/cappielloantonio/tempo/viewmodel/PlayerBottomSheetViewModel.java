@@ -1,7 +1,9 @@
 package com.cappielloantonio.tempo.viewmodel;
 
 import android.app.Application;
+import android.content.ComponentName;
 import android.content.Context;
+import android.os.Handler;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.OptIn;
@@ -10,6 +12,8 @@ import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.media3.common.util.UnstableApi;
+import androidx.media3.session.MediaBrowser;
+import androidx.media3.session.SessionToken;
 
 import com.cappielloantonio.tempo.interfaces.StarCallback;
 import com.cappielloantonio.tempo.model.Download;
@@ -20,17 +24,25 @@ import com.cappielloantonio.tempo.repository.FavoriteRepository;
 import com.cappielloantonio.tempo.repository.OpenRepository;
 import com.cappielloantonio.tempo.repository.QueueRepository;
 import com.cappielloantonio.tempo.repository.SongRepository;
+import com.cappielloantonio.tempo.service.MediaService;
 import com.cappielloantonio.tempo.subsonic.models.AlbumID3;
 import com.cappielloantonio.tempo.subsonic.models.ArtistID3;
 import com.cappielloantonio.tempo.subsonic.models.Child;
+import com.cappielloantonio.tempo.subsonic.models.Line;
 import com.cappielloantonio.tempo.subsonic.models.LyricsList;
 import com.cappielloantonio.tempo.subsonic.models.PlayQueue;
+import com.cappielloantonio.tempo.subsonic.models.StructuredLyrics;
 import com.cappielloantonio.tempo.util.Constants;
 import com.cappielloantonio.tempo.util.DownloadUtil;
 import com.cappielloantonio.tempo.util.MappingUtil;
 import com.cappielloantonio.tempo.util.NetworkUtil;
 import com.cappielloantonio.tempo.util.OpenSubsonicExtensionsUtil;
+import android.content.Intent;
+import com.cappielloantonio.tempo.service.DesktopLyricsService;
+import com.cappielloantonio.tempo.util.OverlayPermissionUtil;
 import com.cappielloantonio.tempo.util.Preferences;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 
 import java.util.Collections;
 import java.util.Date;
@@ -55,6 +67,13 @@ public class PlayerBottomSheetViewModel extends AndroidViewModel {
     private final MutableLiveData<ArtistID3> liveArtist = new MutableLiveData<>(null);
     private final MutableLiveData<List<Child>> instantMix = new MutableLiveData<>(null);
     private boolean lyricsSyncState = true;
+    
+    // Media browser for getting current playback position
+    private ListenableFuture<MediaBrowser> mediaBrowserListenableFuture;
+    private MediaBrowser mediaBrowser;
+    // Handler for periodic lyrics update
+    private Handler syncLyricsHandler;
+    private Runnable syncLyricsRunnable;
 
 
     public PlayerBottomSheetViewModel(@NonNull Application application) {
@@ -66,6 +85,26 @@ public class PlayerBottomSheetViewModel extends AndroidViewModel {
         queueRepository = new QueueRepository();
         favoriteRepository = new FavoriteRepository();
         openRepository = new OpenRepository();
+        
+        // Initialize media browser for getting current playback position
+        initializeMediaBrowser();
+    }
+    
+    private void initializeMediaBrowser() {
+        mediaBrowserListenableFuture = new MediaBrowser.Builder(getApplication(), 
+                new SessionToken(getApplication(), 
+                        new ComponentName(getApplication(), MediaService.class)))
+                .buildAsync();
+        
+        mediaBrowserListenableFuture.addListener(() -> {
+            try {
+                if (mediaBrowserListenableFuture.isDone()) {
+                    mediaBrowser = mediaBrowserListenableFuture.get();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }, MoreExecutors.directExecutor());
     }
 
     public LiveData<List<Queue>> getQueueSong() {
@@ -141,11 +180,90 @@ public class PlayerBottomSheetViewModel extends AndroidViewModel {
 
     public void refreshMediaInfo(LifecycleOwner owner, Child media) {
         if (OpenSubsonicExtensionsUtil.isSongLyricsExtensionAvailable()) {
-            openRepository.getLyricsBySongId(media.getId()).observe(owner, lyricsListLiveData::postValue);
-            lyricsLiveData.postValue(null);
+            openRepository.getLyricsBySongId(media.getId()).observe(owner, lyricsList -> {
+                lyricsListLiveData.postValue(lyricsList);
+                updateDesktopLyrics(null, lyricsList);
+                lyricsLiveData.postValue(null);
+            });
         } else {
-            songRepository.getSongLyrics(media).observe(owner, lyricsLiveData::postValue);
-            lyricsListLiveData.postValue(null);
+            songRepository.getSongLyrics(media).observe(owner, lyrics -> {
+                lyricsLiveData.postValue(lyrics);
+                updateDesktopLyrics(lyrics, null);
+                lyricsListLiveData.postValue(null);
+            });
+        }
+    }
+
+    private void updateDesktopLyrics(String lyrics, LyricsList lyricsList) {
+        if (Preferences.isDesktopLyricsEnabled()) {
+            // Start periodic lyrics update
+            defineLyricsSyncHandler(lyricsList, lyrics);
+        }
+    }
+    
+    private void defineLyricsSyncHandler(LyricsList lyricsList, String plainLyrics) {
+        // Remove existing handler if any
+        releaseLyricsSyncHandler();
+        
+        if (lyricsList != null || plainLyrics != null) {
+            syncLyricsHandler = new Handler();
+            syncLyricsRunnable = () -> {
+                if (syncLyricsHandler != null) {
+                    updateCurrentLyric(lyricsList, plainLyrics);
+                    syncLyricsHandler.postDelayed(syncLyricsRunnable, 250);
+                }
+            };
+            
+            syncLyricsHandler.postDelayed(syncLyricsRunnable, 250);
+        }
+    }
+    
+    private void updateCurrentLyric(LyricsList lyricsList, String plainLyrics) {
+        if (mediaBrowser == null) return;
+        
+        String currentLyric = null;
+        String nextLyric = null;
+        
+        if (lyricsList != null && lyricsList.getStructuredLyrics() != null && !lyricsList.getStructuredLyrics().isEmpty()) {
+            // For synced lyrics, get current position and find corresponding line
+            int timestamp = (int) (mediaBrowser.getCurrentPosition());
+            StructuredLyrics structuredLyrics = lyricsList.getStructuredLyrics().get(0);
+            
+            if (structuredLyrics != null && structuredLyrics.getLine() != null && !structuredLyrics.getLine().isEmpty()) {
+                List<Line> lines = structuredLyrics.getLine();
+                // Find the last line that has a start time less than current timestamp
+                Line currentLine = lines.stream()
+                        .filter(line -> line != null && line.getStart() != null && line.getStart() < timestamp)
+                        .reduce((first, second) -> second).orElse(null);
+                
+                if (currentLine != null) {
+                    currentLyric = currentLine.getValue();
+                    // Find the next line
+                    int currentIndex = lines.indexOf(currentLine);
+                    if (currentIndex < lines.size() - 1) {
+                        nextLyric = lines.get(currentIndex + 1).getValue();
+                    }
+                }
+            }
+        } else if (plainLyrics != null) {
+            // For plain text lyrics, just show them as is
+            currentLyric = plainLyrics;
+        }
+        
+        if (currentLyric != null && Preferences.isDesktopLyricsEnabled()) {
+            // Send the current lyric and next lyric to the desktop lyrics service only if it's enabled
+            Intent intent = new Intent(getApplication(), DesktopLyricsService.class);
+            intent.setAction(DesktopLyricsService.ACTION_UPDATE_LYRICS);
+            intent.putExtra(DesktopLyricsService.EXTRA_CURRENT_LYRIC, currentLyric);
+            intent.putExtra(DesktopLyricsService.EXTRA_NEXT_LYRIC, nextLyric);
+            getApplication().startService(intent);
+        }
+    }
+    
+    private void releaseLyricsSyncHandler() {
+        if (syncLyricsHandler != null) {
+            syncLyricsHandler.removeCallbacks(syncLyricsRunnable);
+            syncLyricsHandler = null;
         }
     }
 
@@ -240,5 +358,15 @@ public class PlayerBottomSheetViewModel extends AndroidViewModel {
 
     public boolean getSyncLyricsState() {
         return lyricsSyncState;
+    }
+    
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        // Release resources
+        releaseLyricsSyncHandler();
+        if (mediaBrowserListenableFuture != null) {
+            MediaBrowser.releaseFuture(mediaBrowserListenableFuture);
+        }
     }
 }

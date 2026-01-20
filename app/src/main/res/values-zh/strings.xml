@@ -1,4 +1,4 @@
-﻿<resources>
+<resources>
     <string name="activity_battery_optimizations_conclusion">如果遇到问题，请访问 https://dontkillmyapp.com。 省电优化选项可能会影响应用的性能，网站上提供了如何禁用这些选项的详细说明。</string>
     <string name="activity_battery_optimizations_summary">请禁用针对媒体锁屏播放的电池优化。</string>
     <string name="activity_battery_optimizations_title">电池优化</string>
@@ -396,4 +396,11 @@
     <string name="playlist_editor_dialog_action_delete_toast">长按删除</string>
     <string name="server_signup_dialog_action_delete_toast">长按删除</string>
     <string name="server_signup_dialog_hint_local_address">本地 URL</string>
+    <string name="settings_title_desktop_lyrics">桌面歌词</string>
+    <string name="settings_desktop_lyrics_title">启用桌面歌词</string>
+    <string name="settings_desktop_lyrics_summary">在主屏幕上显示歌词</string>
+    <string name="settings_desktop_lyrics_font_size">字体大小</string>
+    <string name="settings_desktop_lyrics_font_size_summary">调整桌面歌词的字体大小</string>
+    <string name="settings_desktop_lyrics_opacity">透明度</string>
+    <string name="settings_desktop_lyrics_opacity_summary">调整桌面歌词背景的透明度</string>
 </resources>

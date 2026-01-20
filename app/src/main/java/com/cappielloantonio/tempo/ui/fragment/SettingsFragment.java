@@ -21,6 +21,7 @@ import androidx.media3.common.util.UnstableApi;
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.SwitchPreference;
 
 import com.cappielloantonio.tempo.BuildConfig;
 import com.cappielloantonio.tempo.R;
@@ -32,7 +33,9 @@ import com.cappielloantonio.tempo.ui.dialog.DeleteDownloadStorageDialog;
 import com.cappielloantonio.tempo.ui.dialog.DownloadStorageDialog;
 import com.cappielloantonio.tempo.ui.dialog.StarredSyncDialog;
 import com.cappielloantonio.tempo.ui.dialog.StreamingCacheStorageDialog;
+import com.cappielloantonio.tempo.service.DesktopLyricsService;
 import com.cappielloantonio.tempo.util.DownloadUtil;
+import com.cappielloantonio.tempo.util.OverlayPermissionUtil;
 import com.cappielloantonio.tempo.util.Preferences;
 import com.cappielloantonio.tempo.util.UIUtil;
 import com.cappielloantonio.tempo.viewmodel.SettingViewModel;
@@ -91,6 +94,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         setStreamingCacheSize();
         setAppLanguage();
         setVersion();
+        setupDesktopLyricsLockedSetting();
 
         actionLogout();
         actionScan();
@@ -99,6 +103,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         actionChangeDownloadStorage();
         actionDeleteDownloadStorage();
         actionKeepScreenOn();
+        actionDesktopLyrics();
     }
 
     @Override
@@ -210,6 +215,22 @@ public class SettingsFragment extends PreferenceFragmentCompat {
             return true;
         });
     }
+    
+    private void setupDesktopLyricsLockedSetting() {
+        SwitchPreference lockedPreference = findPreference("desktop_lyrics_locked");
+        if (lockedPreference != null) {
+            lockedPreference.setOnPreferenceChangeListener((preference, newValue) -> {
+                boolean isLocked = (boolean) newValue;
+                // Save the lock state
+                Preferences.setDesktopLyricsLocked(isLocked);
+                // Send intent to update the lock state in the service
+                Intent intent = new Intent(requireContext(), DesktopLyricsService.class);
+                intent.setAction(DesktopLyricsService.ACTION_UPDATE_SETTINGS);
+                requireContext().startService(intent);
+                return true;
+            });
+        }
+    }
 
     private void setVersion() {
         findPreference("version").setSummary(BuildConfig.VERSION_NAME);
@@ -319,6 +340,76 @@ public class SettingsFragment extends PreferenceFragmentCompat {
                     activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 } else {
                     activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                }
+            }
+            return true;
+        });
+    }
+
+    private void actionDesktopLyrics() {
+        findPreference("desktop_lyrics_enabled").setOnPreferenceChangeListener((preference, newValue) -> {
+            if (newValue instanceof Boolean) {
+                boolean enabled = (Boolean) newValue;
+                Preferences.setDesktopLyricsEnabled(enabled);
+                if (enabled) {
+                    if (OverlayPermissionUtil.hasOverlayPermission(requireContext())) {
+                        OverlayPermissionUtil.startDesktopLyricsService(requireContext());
+                    } else {
+                        OverlayPermissionUtil.requestOverlayPermission(activity, 1001);
+                        return false;
+                    }
+                } else {
+                    OverlayPermissionUtil.stopDesktopLyricsService(requireContext());
+                }
+            }
+            return true;
+        });
+
+        findPreference("desktop_lyrics_font_size").setOnPreferenceChangeListener((preference, newValue) -> {
+            if (newValue instanceof Integer) {
+                int size = (Integer) newValue;
+                // Convert seekbar value (0-20) to actual font size adjustment
+                // 0 means use system default, then each increment adds 1sp
+                float fontSize = size == 0 ? 0f : 12f + size;
+                Preferences.setDesktopLyricsFontSize(fontSize);
+                
+                // Update desktop lyrics with new font size
+                if (Preferences.isDesktopLyricsEnabled()) {
+                    Intent intent = new Intent(requireContext(), DesktopLyricsService.class);
+                    intent.setAction(DesktopLyricsService.ACTION_UPDATE_SETTINGS);
+                    requireContext().startService(intent);
+                }
+            }
+            return true;
+        });
+
+        findPreference("desktop_lyrics_opacity").setOnPreferenceChangeListener((preference, newValue) -> {
+            if (newValue instanceof Integer) {
+                int opacity = (Integer) newValue;
+                // Convert seekbar value (0-100) to actual opacity (0.0-1.0)
+                float opacityFloat = opacity / 100f;
+                Preferences.setDesktopLyricsOpacity(opacityFloat);
+                
+                // Update desktop lyrics with new opacity
+                if (Preferences.isDesktopLyricsEnabled()) {
+                    Intent intent = new Intent(requireContext(), DesktopLyricsService.class);
+                    intent.setAction(DesktopLyricsService.ACTION_UPDATE_SETTINGS);
+                    requireContext().startService(intent);
+                }
+            }
+            return true;
+        });
+
+        findPreference("desktop_lyrics_font_color").setOnPreferenceChangeListener((preference, newValue) -> {
+            if (newValue instanceof String) {
+                String color = (String) newValue;
+                Preferences.setDesktopLyricsFontColor(color);
+                
+                // Update desktop lyrics with new font color
+                if (Preferences.isDesktopLyricsEnabled()) {
+                    Intent intent = new Intent(requireContext(), DesktopLyricsService.class);
+                    intent.setAction(DesktopLyricsService.ACTION_UPDATE_SETTINGS);
+                    requireContext().startService(intent);
                 }
             }
             return true;

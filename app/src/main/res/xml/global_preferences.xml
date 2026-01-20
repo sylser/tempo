@@ -80,6 +80,46 @@
             android:defaultValue="true"
             android:summary="@string/settings_music_directory_summary"
             android:key="music_directory_section_visibility" />
+
+        <PreferenceCategory app:title="@string/settings_title_desktop_lyrics">
+            <SwitchPreference
+                android:title="@string/settings_desktop_lyrics_title"
+                android:defaultValue="false"
+                android:summary="@string/settings_desktop_lyrics_summary"
+                android:key="desktop_lyrics_enabled" />
+
+            <SeekBarPreference
+                android:key="desktop_lyrics_font_size"
+                app:defaultValue="18"
+                app:min="14"
+                android:max="100"
+                app:seekBarIncrement="1"
+                app:showSeekBarValue="true"
+                app:summary="@string/settings_desktop_lyrics_font_size_summary"
+                app:title="@string/settings_desktop_lyrics_font_size" />
+
+            <SeekBarPreference
+                android:key="desktop_lyrics_opacity"
+                app:defaultValue="50"
+                app:min="0"
+                android:max="100"
+                app:seekBarIncrement="5"
+                app:showSeekBarValue="true"
+                app:summary="@string/settings_desktop_lyrics_opacity_summary"
+                app:title="@string/settings_desktop_lyrics_opacity" />
+
+            <com.cappielloantonio.tempo.ui.preference.ColorPickerPreference
+                android:key="desktop_lyrics_font_color"
+                android:title="@string/settings_desktop_lyrics_font_color"
+                android:summary="@string/settings_desktop_lyrics_font_color_summary"
+                app:defaultValue="#FFFFFF" />
+
+            <SwitchPreference
+                android:key="desktop_lyrics_locked"
+                android:defaultValue="false"
+                android:summary="@string/settings_desktop_lyrics_locked_summary"
+                android:title="@string/settings_desktop_lyrics_locked_title" />
+        </PreferenceCategory>
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/settings_title_data">

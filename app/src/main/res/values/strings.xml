@@ -415,4 +415,17 @@
     <string name="undraw_page">unDraw</string>
     <string name="undraw_thanks">A special thanks goes to unDraw without whose illustrations we could not have made this application more beautiful.</string>
     <string name="undraw_url">https://undraw.co/</string>
+    <!-- Desktop Lyrics -->
+    <string name="no_lyrics_available">无歌词可用</string>
+    <string name="settings_title_desktop_lyrics">桌面歌词</string>
+    <string name="settings_desktop_lyrics_title">启用桌面歌词</string>
+    <string name="settings_desktop_lyrics_summary">在主屏幕上显示歌词</string>
+    <string name="settings_desktop_lyrics_font_size">字体大小</string>
+    <string name="settings_desktop_lyrics_font_size_summary">调整桌面歌词的字体大小</string>
+    <string name="settings_desktop_lyrics_opacity">文字透明度</string>
+    <string name="settings_desktop_lyrics_opacity_summary">调整桌面歌词文字的透明度</string>
+    <string name="settings_desktop_lyrics_font_color">文字颜色</string>
+    <string name="settings_desktop_lyrics_font_color_summary">选择桌面歌词文字的颜色</string>
+    <string name="settings_desktop_lyrics_locked_title">锁定位置</string>
+    <string name="settings_desktop_lyrics_locked_summary">防止桌面歌词被拖动</string>
 </resources>

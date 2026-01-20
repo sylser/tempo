@@ -63,7 +63,14 @@ object Preferences {
     private const val RATING_PER_ITEM = "rating_per_item"
     private const val NEXT_UPDATE_CHECK = "next_update_check"
     private const val CONTINUOUS_PLAY = "continuous_play"
-    private const val LAST_INSTANT_MIX = "last_instant_mix"
+    const val LAST_INSTANT_MIX = "last_instant_mix"
+    const val DESKTOP_LYRICS_ENABLED = "desktop_lyrics_enabled"
+    const val DESKTOP_LYRICS_FONT_SIZE = "desktop_lyrics_font_size"
+    const val DESKTOP_LYRICS_OPACITY = "desktop_lyrics_opacity"
+    const val DESKTOP_LYRICS_FONT_COLOR = "desktop_lyrics_font_color"
+    const val DESKTOP_LYRICS_LOCKED = "desktop_lyrics_locked"
+    const val DESKTOP_LYRICS_POSITION_X = "desktop_lyrics_position_x"
+    const val DESKTOP_LYRICS_POSITION_Y = "desktop_lyrics_position_y"
 
 
     @JvmStatic
@@ -495,5 +502,83 @@ object Preferences {
         return App.getInstance().preferences.getLong(
                 LAST_INSTANT_MIX, 0
         ) + 5000 < System.currentTimeMillis()
+    }
+
+    @JvmStatic
+    fun isDesktopLyricsEnabled(): Boolean {
+        return App.getInstance().preferences.getBoolean(DESKTOP_LYRICS_ENABLED, false)
+    }
+
+    @JvmStatic
+    fun setDesktopLyricsEnabled(enabled: Boolean) {
+        App.getInstance().preferences.edit().putBoolean(DESKTOP_LYRICS_ENABLED, enabled).apply()
+    }
+
+    @JvmStatic
+    fun getDesktopLyricsFontSize(): Float {
+        // SeekBarPreference存储的是Integer类型，需要转换为Float类型
+        val intValue = App.getInstance().preferences.getInt(DESKTOP_LYRICS_FONT_SIZE, 0)
+        return intValue.toFloat()
+    }
+
+    @JvmStatic
+    fun setDesktopLyricsFontSize(fontSize: Float) {
+        // 将Float类型转换为Integer类型存储
+        val intValue = fontSize.toInt()
+        App.getInstance().preferences.edit().putInt(DESKTOP_LYRICS_FONT_SIZE, intValue).apply()
+    }
+
+    @JvmStatic
+    fun getDesktopLyricsOpacity(): Float {
+        // SeekBarPreference存储的是Integer类型(50-100)，需要转换为Float类型(0.5-1.0)
+        val intValue = App.getInstance().preferences.getInt(DESKTOP_LYRICS_OPACITY, 80)
+        return intValue / 100f
+    }
+
+    @JvmStatic
+    fun setDesktopLyricsOpacity(opacity: Float) {
+        // 将Float类型(0.5-1.0)转换为Integer类型(50-100)存储
+        val intValue = (opacity * 100).toInt()
+        App.getInstance().preferences.edit().putInt(DESKTOP_LYRICS_OPACITY, intValue).apply()
+    }
+    
+    @JvmStatic
+    fun getDesktopLyricsLocked(): Boolean {
+        return App.getInstance().preferences.getBoolean(DESKTOP_LYRICS_LOCKED, false)
+    }
+
+    @JvmStatic
+    fun setDesktopLyricsLocked(locked: Boolean) {
+        App.getInstance().preferences.edit().putBoolean(DESKTOP_LYRICS_LOCKED, locked).apply()
+    }
+
+    @JvmStatic
+    fun getDesktopLyricsFontColor(): String {
+        return App.getInstance().preferences.getString(DESKTOP_LYRICS_FONT_COLOR, "#FFFFFF") ?: "#FFFFFF"
+    }
+
+    @JvmStatic
+    fun setDesktopLyricsFontColor(color: String) {
+        App.getInstance().preferences.edit().putString(DESKTOP_LYRICS_FONT_COLOR, color).apply()
+    }
+
+    @JvmStatic
+    fun getDesktopLyricsPositionX(): Int {
+        return App.getInstance().preferences.getInt(DESKTOP_LYRICS_POSITION_X, 0)
+    }
+
+    @JvmStatic
+    fun setDesktopLyricsPositionX(x: Int) {
+        App.getInstance().preferences.edit().putInt(DESKTOP_LYRICS_POSITION_X, x).apply()
+    }
+
+    @JvmStatic
+    fun getDesktopLyricsPositionY(): Int {
+        return App.getInstance().preferences.getInt(DESKTOP_LYRICS_POSITION_Y, 0)
+    }
+
+    @JvmStatic
+    fun setDesktopLyricsPositionY(y: Int) {
+        App.getInstance().preferences.edit().putInt(DESKTOP_LYRICS_POSITION_Y, y).apply()
     }
 }
