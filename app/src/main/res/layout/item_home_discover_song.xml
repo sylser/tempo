@@ -23,7 +23,7 @@
         android:maxLines="2"
         android:textColor="@color/gradientTitleColor"
         android:textFontWeight="400"
-        android:textSize="20sp" />
+        android:textSize="@dimen/discover_song_title_size" />
 
     <TextView
         android:id="@+id/album_discover_song_label"
@@ -38,5 +38,5 @@
         android:maxLines="1"
         android:textColor="@color/gradientSubtitleColor"
         android:textFontWeight="400"
-        android:textSize="14sp" />
+        android:textSize="@dimen/discover_song_subtitle_size" />
 </RelativeLayout>

@@ -47,6 +47,6 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:text="@string/activity_info_offline_mode"
-        android:textSize="6sp"
+        android:textSize="@dimen/small_text_size"
         android:visibility="gone" />
 </LinearLayout>

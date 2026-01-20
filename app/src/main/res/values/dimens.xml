@@ -1,4 +1,13 @@
 <resources>
+    <!-- Font sizes -->
+    <dimen name="lyrics_text_size">18sp</dimen>
+    <dimen name="player_time_text_size">12sp</dimen>
+    <dimen name="small_text_size">6sp</dimen>
+    <dimen name="fast_scrollbar_text_size">48sp</dimen>
+    <dimen name="discover_song_title_size">20sp</dimen>
+    <dimen name="discover_song_subtitle_size">14sp</dimen>
+
+    <!-- Original dimensions -->
     <dimen name="appbar_header_height">296dp</dimen>
     <dimen name="activity_margin_content">24dp</dimen>
     <dimen name="bottom_sheet_behavior_peek_height">136dp</dimen>

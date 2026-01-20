@@ -1,0 +1,9 @@
+<resources>
+    <!-- Font sizes (20% larger than phone) -->
+    <dimen name="lyrics_text_size">22sp</dimen>
+    <dimen name="player_time_text_size">14sp</dimen>
+    <dimen name="small_text_size">7sp</dimen>
+    <dimen name="fast_scrollbar_text_size">58sp</dimen>
+    <dimen name="discover_song_title_size">24sp</dimen>
+    <dimen name="discover_song_subtitle_size">17sp</dimen>
+</resources>
