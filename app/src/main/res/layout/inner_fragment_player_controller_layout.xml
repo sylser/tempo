@@ -73,7 +73,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.575" />
+        app:layout_constraintGuide_percent="0.65" />
 
     <TextView
         android:id="@+id/player_media_title_label"
@@ -162,9 +162,9 @@
 
     <View
         android:id="@+id/placeholder_view_left"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:layout_marginStart="24dp"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_marginStart="16dp"
         app:layout_constraintBottom_toBottomOf="@+id/placeholder_view_middle_left"
         app:layout_constraintEnd_toStartOf="@+id/placeholder_view_middle_left"
         app:layout_constraintStart_toStartOf="parent"
@@ -172,8 +172,8 @@
 
     <View
         android:id="@+id/placeholder_view_middle_left"
-        android:layout_width="42dp"
-        android:layout_height="42dp"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
         app:layout_constraintBottom_toBottomOf="@+id/player_play_pause_placeholder_view"
         app:layout_constraintEnd_toStartOf="@+id/player_play_pause_placeholder_view"
         app:layout_constraintStart_toEndOf="@id/placeholder_view_left"
@@ -181,8 +181,8 @@
 
     <View
         android:id="@+id/player_play_pause_placeholder_view"
-        android:layout_width="70dp"
-        android:layout_height="70dp"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
         android:layout_marginTop="0dp"
         app:layout_constraintBottom_toTopOf="@+id/player_quick_action_view"
         app:layout_constraintEnd_toEndOf="parent"
@@ -192,8 +192,8 @@
 
     <View
         android:id="@+id/placeholder_view_middle_right"
-        android:layout_width="42dp"
-        android:layout_height="42dp"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
         app:layout_constraintBottom_toBottomOf="@+id/player_play_pause_placeholder_view"
         app:layout_constraintEnd_toStartOf="@id/placeholder_view_right"
         app:layout_constraintStart_toEndOf="@+id/player_play_pause_placeholder_view"
@@ -201,9 +201,9 @@
 
     <View
         android:id="@+id/placeholder_view_right"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:layout_marginEnd="24dp"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_marginEnd="16dp"
         app:layout_constraintBottom_toBottomOf="@+id/placeholder_view_middle_right"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/placeholder_view_middle_right"
@@ -228,9 +228,9 @@
 
     <ImageButton
         android:id="@+id/exo_shuffle"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:layout_marginStart="24dp"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginStart="16dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:scaleType="fitCenter"
         app:layout_constraintBottom_toBottomOf="@+id/placeholder_view_middle_left"
@@ -255,8 +255,8 @@
 
     <ImageButton
         android:id="@+id/exo_prev"
-        android:layout_width="42dp"
-        android:layout_height="42dp"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:scaleType="fitCenter"
         app:layout_constraintBottom_toBottomOf="@+id/player_play_pause_placeholder_view"
@@ -269,8 +269,8 @@
     <ImageButton
         android:id="@id/exo_play_pause"
         style="@style/ExoStyledControls.Button.Center.PlayPause"
-        android:layout_width="80dp"
-        android:layout_height="80dp"
+        android:layout_width="70dp"
+        android:layout_height="70dp"
         android:layout_marginTop="0dp"
         app:layout_constraintBottom_toTopOf="@+id/player_quick_action_view"
         app:layout_constraintEnd_toEndOf="parent"
@@ -281,8 +281,8 @@
 
     <ImageButton
         android:id="@+id/exo_next"
-        android:layout_width="42dp"
-        android:layout_height="42dp"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:scaleType="fitCenter"
         app:layout_constraintBottom_toBottomOf="@+id/player_play_pause_placeholder_view"

@@ -38,14 +38,18 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
             android:id="@+id/now_playing_song_lyrics_text_view"
-            style="@style/BodyLarge"
+            style="@style/InterFontFamily"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:textSize="18sp"
+            android:textFontWeight="500"
+            android:lineSpacingExtra="8dp"
+            android:gravity="center"
+            android:textColor="@color/titleTextColor"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -70,9 +74,14 @@
 
     <TextView
         android:id="@+id/temp_lyrics_line_text_view"
-        style="@style/BodyLarge"
+        style="@style/InterFontFamily"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:textSize="18sp"
+        android:textFontWeight="500"
+        android:lineSpacingExtra="8dp"
+        android:gravity="center"
+        android:textColor="@color/titleTextColor"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
