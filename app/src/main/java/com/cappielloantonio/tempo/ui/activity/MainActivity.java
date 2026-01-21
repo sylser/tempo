@@ -258,9 +258,18 @@ public class MainActivity extends BaseActivity {
                 songRepository.getRandomSample(20, null, null).observe(MainActivity.this, songs -> {
                     try {
                         if (songs != null && !songs.isEmpty()) {
-                            MediaManager.init(getMediaBrowserListenableFuture(), songs);
+                            // Check if music is already playing
+                            boolean isPlaying = false;
                             if (getMediaBrowserListenableFuture() != null && getMediaBrowserListenableFuture().isDone()) {
-                                Objects.requireNonNull(getMediaBrowserListenableFuture().get()).play();
+                                isPlaying = Objects.requireNonNull(getMediaBrowserListenableFuture().get()).isPlaying();
+                            }
+                            
+                            // Only start random play if music is not already playing
+                            if (!isPlaying) {
+                                MediaManager.init(getMediaBrowserListenableFuture(), songs);
+                                if (getMediaBrowserListenableFuture() != null && getMediaBrowserListenableFuture().isDone()) {
+                                    Objects.requireNonNull(getMediaBrowserListenableFuture().get()).play();
+                                }
                             }
                         }
                     } catch (ExecutionException | InterruptedException e) {
