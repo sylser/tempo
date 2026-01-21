@@ -25,6 +25,7 @@ import com.cappielloantonio.tempo.R;
 import com.cappielloantonio.tempo.broadcast.receiver.ConnectivityStatusBroadcastReceiver;
 import com.cappielloantonio.tempo.databinding.ActivityMainBinding;
 import com.cappielloantonio.tempo.github.utils.UpdateUtil;
+import com.cappielloantonio.tempo.repository.SongRepository;
 import com.cappielloantonio.tempo.service.MediaManager;
 import com.cappielloantonio.tempo.ui.activity.base.BaseActivity;
 import com.cappielloantonio.tempo.ui.dialog.ConnectionAlertDialog;
@@ -34,6 +35,7 @@ import com.cappielloantonio.tempo.ui.fragment.PlayerBottomSheetFragment;
 import com.cappielloantonio.tempo.util.Constants;
 import com.cappielloantonio.tempo.util.Preferences;
 import com.cappielloantonio.tempo.viewmodel.MainViewModel;
+import java.util.concurrent.ExecutionException;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.color.DynamicColors;
@@ -251,7 +253,22 @@ public class MainActivity extends BaseActivity {
 
         getMediaBrowserListenableFuture().addListener(() -> {
             try {
-                getMediaBrowserListenableFuture().get().addListener(new Player.Listener() {
+                // Auto start random play on app launch
+                SongRepository songRepository = new SongRepository();
+                songRepository.getRandomSample(20, null, null).observe(MainActivity.this, songs -> {
+                    try {
+                        if (songs != null && !songs.isEmpty()) {
+                            MediaManager.init(getMediaBrowserListenableFuture(), songs);
+                            if (getMediaBrowserListenableFuture() != null && getMediaBrowserListenableFuture().isDone()) {
+                                Objects.requireNonNull(getMediaBrowserListenableFuture().get()).play();
+                            }
+                        }
+                    } catch (ExecutionException | InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                });
+
+                Objects.requireNonNull(getMediaBrowserListenableFuture().get()).addListener(new Player.Listener() {
                     @Override
                     public void onIsPlayingChanged(boolean isPlaying) {
                         if (isPlaying && bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_HIDDEN) {
