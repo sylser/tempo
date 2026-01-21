@@ -26,3 +26,20 @@
 
 -keep class **.reflect.TypeToken { *; }
 -keep class * extends **.reflect.TypeToken
+# 保留所有 View 和动画相关类
+-keep class android.view.View { *; }
+-keep class android.view.ViewPropertyAnimator { *; }
+
+## 保留自定义 TextView、LyricsView 等方法
+-keep class com.cappielloantonio.tempo.** { *; }
+
+# 保留 Kotlin lambda / 扩展函数（重要）
+-keepclassmembers class ** {
+    <init>(...);
+    void *(...);
+}
+
+# 保留 post / Runnable
+-keepclassmembers class ** implements java.lang.Runnable {
+    public void run();
+}
