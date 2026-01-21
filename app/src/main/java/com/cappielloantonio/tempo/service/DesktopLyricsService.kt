@@ -350,12 +350,73 @@ class DesktopLyricsService : Service() {
         // Double tap to lock/unlock position
 
     }
-    
+    private var lastLyric: String? = null
     fun updateLyrics(prevLyric: String?, currentLyric: String?, nextLyric: String?) {
-        prevLyricsTextView.text = prevLyric ?: ""
-        currentLyricsTextView.text = currentLyric ?: getString(R.string.no_lyrics_available)
-        nextLyricsTextView.text = nextLyric ?: ""
+
+        // 没有歌词 → 只处理显隐一次
+        if (currentLyric == null) {
+            if (lyricsView.visibility == View.VISIBLE) {
+                lyricsView.visibility = View.GONE
+            }
+            lastLyric = null
+            return
+        }
+
+        // 🔥 核心：同一句歌词，直接返回，不再动画
+        if (currentLyric == lastLyric) {
+            return
+        }
+        lastLyric = currentLyric
+
+        // ===== 到这里，才是真正的“歌词切换节点” =====
+
+        if (lyricsView.visibility != View.VISIBLE) {
+            lyricsView.visibility = View.VISIBLE
+        }
+
+        // 取消当前正在进行的动画
+        currentLyricsTextView.animate().cancel()
+        nextLyricsTextView.animate().cancel()
+
+        // 立即更新文本
+        prevLyricsTextView.text = prevLyric.orEmpty()
+        currentLyricsTextView.text = currentLyric
+        nextLyricsTextView.text = nextLyric.orEmpty()
+
+        currentLyricsTextView.post {
+
+            // ===== 上一句：淡出 =====
+            prevLyricsTextView.animate().cancel()
+            prevLyricsTextView.alpha = 1f
+            prevLyricsTextView.translationY = 0f
+
+            prevLyricsTextView.animate()
+                .translationY(-16f)
+                .alpha(0f)
+                .setDuration(240)
+                .start()
+
+            // ===== 当前句：淡入（你原来的逻辑）=====
+            currentLyricsTextView.translationY = 24f
+            currentLyricsTextView.alpha = 0f
+            nextLyricsTextView.translationY = 24f
+            nextLyricsTextView.alpha = 0f
+
+            currentLyricsTextView.animate()
+                .translationY(0f)
+                .alpha(1f)
+                .setDuration(240)
+                .start()
+
+            // ===== 下一句：淡入（你原来的逻辑）=====
+            nextLyricsTextView.animate()
+                .translationY(0f)
+                .alpha(1f)
+                .setDuration(240)
+                .start()
+        }
     }
+
 
 
 }
