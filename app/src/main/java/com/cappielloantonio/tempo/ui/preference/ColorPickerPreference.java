@@ -11,15 +11,15 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.GridLayout;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.preference.Preference;
-import androidx.preference.PreferenceViewHolder;
 
 import com.cappielloantonio.tempo.R;
 import com.cappielloantonio.tempo.service.DesktopLyricsService;
@@ -32,7 +32,6 @@ public class ColorPickerPreference extends Preference {
     private List<String> colorValues = new ArrayList<>();
     private List<String> colorTitles = new ArrayList<>();
     private String selectedColor;
-    private int numColumns = 4;
 
     public ColorPickerPreference(Context context) {
         super(context);
@@ -64,92 +63,135 @@ public class ColorPickerPreference extends Preference {
         
         // Set default selected color
         selectedColor = Preferences.getDesktopLyricsFontColor();
+        // Set click listener to show color picker dialog
+        setOnPreferenceClickListener(preference -> {
+            showColorPickerDialog();
+            return true;
+        });
     }
 
     private void readAttributes(AttributeSet attrs) {
         TypedArray a = getContext().obtainStyledAttributes(attrs, R.styleable.ColorPickerPreference);
-        numColumns = a.getInt(R.styleable.ColorPickerPreference_numColumns, 4);
         a.recycle();
     }
 
-    @Override
-    public void onBindViewHolder(@NonNull PreferenceViewHolder holder) {
-        super.onBindViewHolder(holder);
+    private void showColorPickerDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        builder.setTitle(R.string.settings_desktop_lyrics_font_color);
         
-        // Get the color grid view from the layout
-        GridLayout colorGrid = holder.itemView.findViewById(R.id.color_picker_grid);
+        // Create a linear layout for the dialog content
+        LinearLayout dialogLayout = new LinearLayout(getContext());
+        dialogLayout.setOrientation(LinearLayout.VERTICAL);
         
-        // Clear any existing views in the grid
-        colorGrid.removeAllViews();
+        // Create list view for color options
+        ListView colorListView = new ListView(getContext());
+        ColorAdapter adapter = new ColorAdapter(getContext(), colorTitles, colorValues);
+        colorListView.setAdapter(adapter);
         
-        // Setup grid layout
-        colorGrid.setColumnCount(numColumns);
-        colorGrid.setRowCount((int) Math.ceil((double) colorValues.size() / numColumns));
+        // Add list view to dialog layout
+        dialogLayout.addView(colorListView);
         
-        // Add color options
-        for (int i = 0; i < colorValues.size(); i++) {
-            String colorValue = colorValues.get(i);
-            String colorTitle = colorTitles.get(i);
+        // Create and show the dialog
+        AlertDialog dialog = builder.create();
+        
+        // Set dialog content and buttons
+        dialog.setView(dialogLayout);
+        dialog.setButton(AlertDialog.BUTTON_NEGATIVE, getContext().getString(android.R.string.cancel), 
+                (dialogInterface, which) -> dialogInterface.dismiss());
+        
+        // Set item click listener
+        colorListView.setOnItemClickListener((parent, view, position, id) -> {
+            selectedColor = colorValues.get(position);
+            Preferences.setDesktopLyricsFontColor(selectedColor);
+            notifyChanged();
             
-            // Create color option view
-            LinearLayout colorOption = new LinearLayout(getContext());
-            colorOption.setOrientation(LinearLayout.VERTICAL);
-            colorOption.setGravity(Gravity.CENTER);
-            colorOption.setPadding(8, 8, 8, 8);
+            // Update desktop lyrics with new color
+            if (Preferences.isDesktopLyricsEnabled()) {
+                Intent intent = new Intent(getContext(), DesktopLyricsService.class);
+                intent.setAction(DesktopLyricsService.ACTION_UPDATE_SETTINGS);
+                getContext().startService(intent);
+            }
             
-            // Create color circle
-            ImageView colorCircle = new ImageView(getContext());
-            // Convert dp to pixels for consistent sizing
-            int size = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 48, 
-                    getContext().getResources().getDisplayMetrics());
-            // Set fixed width and height to ensure circle shape
-            colorCircle.setLayoutParams(new LinearLayout.LayoutParams(size, size));
-            colorCircle.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            // Dismiss the dialog
+            dialog.dismiss();
+        });
+        
+        dialog.show();
+    }
+
+    private class ColorAdapter extends ArrayAdapter<String> {
+        private List<String> colorValues;
+
+        public ColorAdapter(Context context, List<String> colorTitles, List<String> colorValues) {
+            super(context, 0, colorTitles);
+            this.colorValues = colorValues;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            ViewHolder holder;
+            
+            if (convertView == null) {
+                // Create a new linear layout for the list item
+                LinearLayout layout = new LinearLayout(getContext());
+                layout.setOrientation(LinearLayout.HORIZONTAL);
+                layout.setGravity(Gravity.CENTER_VERTICAL);
+                layout.setPadding(16, 16, 16, 16);
+                
+                // Create color circle
+                ImageView colorCircle = new ImageView(getContext());
+                // Convert dp to pixels for consistent sizing
+                int size = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24, 
+                        getContext().getResources().getDisplayMetrics());
+                // Set fixed width and height to ensure circle shape
+                LinearLayout.LayoutParams circleParams = new LinearLayout.LayoutParams(size, size);
+                circleParams.setMargins(0, 0, 16, 0);
+                colorCircle.setLayoutParams(circleParams);
+                colorCircle.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                
+                // Create color label
+                TextView colorLabel = new TextView(getContext());
+                LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                colorLabel.setLayoutParams(labelParams);
+                
+                // Add views to layout
+                layout.addView(colorCircle);
+                layout.addView(colorLabel);
+                
+                // Create view holder
+                holder = new ViewHolder();
+                holder.colorCircle = colorCircle;
+                holder.colorLabel = colorLabel;
+                layout.setTag(holder);
+                
+                convertView = layout;
+            } else {
+                holder = (ViewHolder) convertView.getTag();
+            }
+            
+            // Set color label text
+            holder.colorLabel.setText(getItem(position));
             
             // Create a drawable from the shape resource
-            Drawable circleDrawable = ContextCompat.getDrawable(getContext(), R.drawable.color_circle).mutate();
+            Drawable circleDrawable = ContextCompat.getDrawable(getContext(), R.drawable.color_circle);
             if (circleDrawable != null) {
+                // Mutate the drawable to avoid sharing state
+                circleDrawable = circleDrawable.mutate();
                 // Parse the color value
-                int color = Color.parseColor(colorValue);
+                int color = Color.parseColor(colorValues.get(position));
                 // Set the tint color
                 circleDrawable.setColorFilter(color, PorterDuff.Mode.SRC_IN);
                 // Set as background
-                colorCircle.setBackground(circleDrawable);
+                holder.colorCircle.setBackground(circleDrawable);
             }
             
-            // Create color label
-            TextView colorLabel = new TextView(getContext());
-            colorLabel.setText(colorTitle);
-            colorLabel.setTextSize(12);
-            colorLabel.setGravity(Gravity.CENTER);
-            colorLabel.setPadding(0, 4, 0, 0);
-            
-            // Add to color option
-            colorOption.addView(colorCircle);
-            colorOption.addView(colorLabel);
-            
-            // Add click listener
-            final String finalColorValue = colorValue;
-            colorOption.setOnClickListener(v -> {
-                selectedColor = finalColorValue;
-                Preferences.setDesktopLyricsFontColor(selectedColor);
-                notifyChanged();
-                
-                // Update desktop lyrics with new color
-                if (Preferences.isDesktopLyricsEnabled()) {
-                    Intent intent = new Intent(getContext(), DesktopLyricsService.class);
-                    intent.setAction(DesktopLyricsService.ACTION_UPDATE_SETTINGS);
-                    getContext().startService(intent);
-                }
-            });
-            
-            // Add to grid
-            GridLayout.LayoutParams params = new GridLayout.LayoutParams();
-            params.width = 0;
-            params.height = GridLayout.LayoutParams.WRAP_CONTENT;
-            params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-            params.rowSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-            colorGrid.addView(colorOption, params);
+            return convertView;
+        }
+        
+        private class ViewHolder {
+            ImageView colorCircle;
+            TextView colorLabel;
         }
     }
 }

@@ -108,11 +108,10 @@
                 app:summary="@string/settings_desktop_lyrics_opacity_summary"
                 app:title="@string/settings_desktop_lyrics_opacity" />
 
-            <com.cappielloantonio.tempo.ui.preference.ColorPickerPreference
+            <Preference
                 android:key="desktop_lyrics_font_color"
                 android:title="@string/settings_desktop_lyrics_font_color"
-                android:summary="@string/settings_desktop_lyrics_font_color_summary"
-                app:defaultValue="#FFFFFF" />
+                android:summary="@string/settings_desktop_lyrics_font_color_summary" />
 
             <SwitchPreference
                 android:key="desktop_lyrics_locked"

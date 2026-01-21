@@ -256,40 +256,124 @@
     </string-array>
     <!-- Desktop Lyrics Font Color Options -->
     <string-array name="desktop_lyrics_font_color_titles">
-        <item>白色</item>
-        <item>黑色</item>
-        <item>红色</item>
-        <item>蓝色</item>
-        <item>绿色</item>
-        <item>黄色</item>
-        <item>橙色</item>
-        <item>紫色</item>
-        <item>粉色</item>
-        <item>青色</item>
-        <item>棕色</item>
-        <item>灰色</item>
-        <item>深蓝色</item>
-        <item>深绿色</item>
+        <!-- 中性色（8） -->
+        <item>暖白</item>
+        <item>纯白</item>
+        <item>浅灰</item>
+        <item>银灰</item>
+        <item>中性灰</item>
+        <item>深灰</item>
+        <item>炭灰</item>
+        <item>近黑</item>
+
+        <!-- 蓝色系（10） -->
+        <item>浅天蓝</item>
+        <item>天蓝</item>
+        <item>雾蓝</item>
+        <item>湖蓝</item>
+        <item>牛仔蓝</item>
+        <item>灰蓝</item>
+        <item>深蓝</item>
+        <item>藏青</item>
+        <item>夜蓝</item>
+        <item>深夜蓝</item>
+
+        <!-- 绿色系（8） -->
+        <item>浅草绿</item>
+        <item>薄荷绿</item>
+        <item>嫩绿</item>
+        <item>青柠绿</item>
+        <item>灰绿</item>
+        <item>橄榄绿</item>
+        <item>深绿</item>
+        <item>墨绿</item>
+
+        <!-- 紫色系（8） -->
+        <item>浅薰衣草</item>
+        <item>淡紫</item>
+        <item>灰紫</item>
+        <item>紫罗兰</item>
+        <item>柔紫</item>
+        <item>暮紫</item>
+        <item>深紫</item>
+        <item>蓝紫</item>
+
+        <!-- 粉 / 橙 / 红点缀（14） -->
+        <item>浅粉</item>
+        <item>樱花粉</item>
+        <item>玫瑰粉</item>
+        <item>豆沙粉</item>
+        <item>浅橙</item>
+        <item>杏橙</item>
+        <item>珊瑚橙</item>
+        <item>暖黄</item>
+        <item>浅金</item>
         <item>金色</item>
-        <item>银色</item>
+        <item>浅红</item>
+        <item>砖红</item>
+        <item>酒红</item>
+        <item>暗红</item>
     </string-array>
-    
+
+
     <string-array name="desktop_lyrics_font_color_values">
-        <item>#FFFFFF</item>
-        <item>#000000</item>
-        <item>#FF0000</item>
-        <item>#0000FF</item>
-        <item>#00FF00</item>
-        <item>#FFFF00</item>
-        <item>#FFA500</item>
-        <item>#800080</item>
-        <item>#FFC0CB</item>
-        <item>#00FFFF</item>
-        <item>#A52A2A</item>
-        <item>#808080</item>
-        <item>#00008B</item>
-        <item>#006400</item>
-        <item>#FFD700</item>
-        <item>#C0C0C0</item>
+        <!-- 中性色 -->
+        <item>#F5F5F5</item> <!-- 暖白 -->
+        <item>#FFFFFF</item> <!-- 纯白 -->
+        <item>#E0E0E0</item> <!-- 浅灰 -->
+        <item>#CFD8DC</item> <!-- 银灰 -->
+        <item>#BDBDBD</item> <!-- 中性灰 -->
+        <item>#757575</item> <!-- 深灰 -->
+        <item>#424242</item> <!-- 炭灰 -->
+        <item>#212121</item> <!-- 近黑 -->
+
+        <!-- 蓝色系 -->
+        <item>#BBDEFB</item> <!-- 浅天蓝 -->
+        <item>#90CAF9</item> <!-- 天蓝 -->
+        <item>#81A1C1</item> <!-- 雾蓝 -->
+        <item>#6BAED6</item> <!-- 湖蓝 -->
+        <item>#4A90E2</item> <!-- 牛仔蓝 -->
+        <item>#78909C</item> <!-- 灰蓝 -->
+        <item>#1E88E5</item> <!-- 深蓝 -->
+        <item>#283593</item> <!-- 藏青 -->
+        <item>#1A237E</item> <!-- 夜蓝 -->
+        <item>#0D47A1</item> <!-- 深夜蓝 -->
+
+        <!-- 绿色系 -->
+        <item>#C8E6C9</item> <!-- 浅草绿 -->
+        <item>#66BB6A</item> <!-- 薄荷绿 -->
+        <item>#81C784</item> <!-- 嫩绿 -->
+        <item>#9CCC65</item> <!-- 青柠绿 -->
+        <item>#A5BFA0</item> <!-- 灰绿 -->
+        <item>#827717</item> <!-- 橄榄绿 -->
+        <item>#388E3C</item> <!-- 深绿 -->
+        <item>#1B5E20</item> <!-- 墨绿 -->
+
+        <!-- 紫色系 -->
+        <item>#E6E6FA</item> <!-- 浅薰衣草 -->
+        <item>#CE93D8</item> <!-- 淡紫 -->
+        <item>#B39DDB</item> <!-- 灰紫 -->
+        <item>#BA68C8</item> <!-- 紫罗兰 -->
+        <item>#9C6ADE</item> <!-- 柔紫 -->
+        <item>#8E24AA</item> <!-- 暮紫 -->
+        <item>#6A1B9A</item> <!-- 深紫 -->
+        <item>#5C6BC0</item> <!-- 蓝紫 -->
+
+        <!-- 粉 / 橙 / 红 -->
+        <item>#F8BBD0</item> <!-- 浅粉 -->
+        <item>#F48FB1</item> <!-- 樱花粉 -->
+        <item>#EC407A</item> <!-- 玫瑰粉 -->
+        <item>#D81B60</item> <!-- 豆沙粉 -->
+        <item>#FFCC80</item> <!-- 浅橙 -->
+        <item>#FFB74D</item> <!-- 杏橙 -->
+        <item>#FF7043</item> <!-- 珊瑚橙 -->
+        <item>#FBC02D</item> <!-- 暖黄 -->
+        <item>#E6C15A</item> <!-- 浅金 -->
+        <item>#D4AF37</item> <!-- 金色 -->
+        <item>#EF9A9A</item> <!-- 浅红 -->
+        <item>#E57373</item> <!-- 砖红 -->
+        <item>#C62828</item> <!-- 酒红 -->
+        <item>#8E0000</item> <!-- 暗红 -->
     </string-array>
+
 </resources>
