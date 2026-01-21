@@ -11,7 +11,7 @@ android {
         targetSdk 35
 
         versionCode 26
-        versionName '3.9.0'
+        versionName '4.0.1'
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
@@ -24,7 +24,14 @@ android {
             }
         }
     }
-
+    signingConfigs {
+        release {
+            storeFile file(RELEASE_STORE_FILE)
+            storePassword RELEASE_STORE_PASSWORD
+            keyAlias RELEASE_KEY_ALIAS
+            keyPassword RELEASE_KEY_PASSWORD
+        }
+    }
     flavorDimensions += "default"
 
     productFlavors {
@@ -50,6 +57,16 @@ android {
             minifyEnabled true
             debuggable false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+            // 🔥 启用 ABI 分包
+            splits {
+                abi {
+                    enable true
+                    reset()
+                    include 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+                    universalApk false // 不生成包含所有架构的大 APK
+                }
+            }
         }
     }
 
