@@ -4,11 +4,14 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -16,10 +19,18 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
-import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
+import androidx.media3.common.MediaItem
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
 import com.cappielloantonio.tempo.R
+import com.cappielloantonio.tempo.repository.SongRepository
+import com.cappielloantonio.tempo.subsonic.models.LyricsList
+import com.cappielloantonio.tempo.subsonic.models.Line
+import com.cappielloantonio.tempo.subsonic.models.StructuredLyrics
 import com.cappielloantonio.tempo.util.Preferences
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 
 class DesktopLyricsService : Service() {
     companion object {
@@ -29,10 +40,22 @@ class DesktopLyricsService : Service() {
         
         const val ACTION_UPDATE_LYRICS = "com.cappielloantonio.tempo.action.UPDATE_LYRICS"
         const val ACTION_UPDATE_SETTINGS = "com.cappielloantonio.tempo.action.UPDATE_SETTINGS"
+        const val ACTION_SONG_CHANGED = "com.cappielloantonio.tempo.action.SONG_CHANGED"
         const val EXTRA_PREV_LYRIC = "com.cappielloantonio.tempo.extra.PREV_LYRIC"
         const val EXTRA_CURRENT_LYRIC = "com.cappielloantonio.tempo.extra.CURRENT_LYRIC"
         const val EXTRA_NEXT_LYRIC = "com.cappielloantonio.tempo.extra.NEXT_LYRIC"
+        const val EXTRA_SONG_ID = "com.cappielloantonio.tempo.extra.SONG_ID"
     }
+
+    private var mediaController: MediaController? = null
+    private var mediaControllerFuture: ListenableFuture<MediaController>? = null
+    private var currentLyrics: LyricsList? = null
+    private var currentLineIndex = -1
+    private val lyricHandler = Handler(Looper.getMainLooper())
+    private val openRepository = com.cappielloantonio.tempo.repository.OpenRepository()
+    
+    // Flag to indicate if we're using self-driven lyrics mode
+    private var isSelfDrivenMode = false
 
     private lateinit var windowManager: WindowManager
     private lateinit var lyricsView: View
@@ -83,6 +106,7 @@ class DesktopLyricsService : Service() {
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification())
         initializeLyricsView()
+        initializeMediaController()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -91,10 +115,19 @@ class DesktopLyricsService : Service() {
             if (action != null) {
                 when (action) {
                     ACTION_UPDATE_LYRICS -> {
-                        val prevLyric = intent.getStringExtra(EXTRA_PREV_LYRIC)
-                        val currentLyric = intent.getStringExtra(EXTRA_CURRENT_LYRIC)
-                        val nextLyric = intent.getStringExtra(EXTRA_NEXT_LYRIC)
-                        updateLyrics(prevLyric, currentLyric, nextLyric)
+                        // Only process external lyrics updates if not in self-driven mode
+                        if (!isSelfDrivenMode) {
+                            val prevLyric = intent.getStringExtra(EXTRA_PREV_LYRIC)
+                            val currentLyric = intent.getStringExtra(EXTRA_CURRENT_LYRIC)
+                            val nextLyric = intent.getStringExtra(EXTRA_NEXT_LYRIC)
+                            updateLyrics(prevLyric, currentLyric, nextLyric)
+                        }
+                    }
+                    ACTION_SONG_CHANGED -> {
+                        val songId = intent.getStringExtra(EXTRA_SONG_ID)
+                        if (songId != null) {
+                            handleSongChange(songId)
+                        }
                     }
                     ACTION_UPDATE_SETTINGS -> {
                         updateFontSizes()
@@ -114,9 +147,49 @@ class DesktopLyricsService : Service() {
         return null
     }
 
+    private fun handleSongChange(songId: String) {
+        // Activate self-driven mode
+        isSelfDrivenMode = true
+        
+        // Stop the old ticker immediately to prevent further updates
+        lyricHandler.removeCallbacks(lyricRunnable)
+
+        // Clear lyrics state completely
+        currentLineIndex = -1
+        currentLyrics = null
+
+        // Clear the display and reset the internal lastLyric state by calling update with null
+        updateLyrics(null, null, null)
+
+        // Small delay to ensure old lyrics are cleared before loading new ones
+        lyricHandler.postDelayed({
+            // Load new song lyrics after clearing old ones
+            loadLyricsForSong(songId)
+        }, 200) // 200ms delay to ensure smooth transition
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "onDestroy: DesktopLyricsService is being destroyed")
+        
+        // Clean up the lyrics ticker
+        lyricHandler.removeCallbacks(lyricRunnable)
+        
+        // Release MediaController
+        try {
+            val future = mediaControllerFuture
+            if (future != null) {
+                MediaController.releaseFuture(future)
+                mediaController = null
+                mediaControllerFuture = null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing media controller: ${e.message}")
+        }
+        
+        // Reset self-driven mode flag
+        isSelfDrivenMode = false
+
         try {
             // Check if windowManager and lyricsView are initialized before removing
             if (::windowManager.isInitialized) {
@@ -134,6 +207,92 @@ class DesktopLyricsService : Service() {
         } catch (e: Exception) {
             Log.e(TAG, "onDestroy: Error removing lyrics view: ${e.message}")
             e.printStackTrace()
+        }
+    }
+
+    private fun initializeMediaController() {
+        try {
+            val sessionToken = SessionToken(this, ComponentName(this, MediaService::class.java))
+            mediaControllerFuture = MediaController.Builder(this, sessionToken).buildAsync()
+            mediaControllerFuture?.addListener({
+                try {
+                    mediaController = mediaControllerFuture?.get()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to create media controller", e)
+                }
+            }, MoreExecutors.directExecutor())
+        } catch (e: Exception) {
+            Log.e(TAG, "Error initializing media controller", e)
+        }
+    }
+
+    private fun loadLyricsForSong(songId: String) {
+        // Load lyrics for the given song ID
+        openRepository.getLyricsBySongId(songId).observeForever { lyricsList ->
+            currentLyrics = lyricsList
+            // Reset state when new lyrics are loaded
+            currentLineIndex = -1
+            // Start the ticker after a delay to allow Media3 timeline to stabilize
+            lyricHandler.postDelayed(lyricRunnable, 300)
+        }
+    }
+
+    private fun findLineForPosition(positionMs: Long): Line? {
+        val lyrics = currentLyrics?.structuredLyrics?.firstOrNull()?.line
+        if (lyrics.isNullOrEmpty()) return null
+
+        // Find the appropriate line for the current position
+        for ((index, line) in lyrics.withIndex()) {
+            val lineStart = line.start
+            if (lineStart != null && lineStart.toLong() > positionMs) {
+                // Return the previous line if we've passed it
+                return if (index > 0) lyrics[index - 1] else null
+            }
+        }
+        
+        // If we're past all defined timestamps, return the last line
+        return lyrics.lastOrNull()
+    }
+
+    private val lyricRunnable = object : Runnable {
+        override fun run() {
+            val controller = mediaController ?: return
+            if (!controller.isConnected) return
+
+            try {
+                val position = controller.currentPosition
+                val line = findLineForPosition(position)
+
+                if (line != null) {
+                    // Access the original lastLyric from the updateLyrics method context
+                    // We need to call updateLyrics with the current line
+                    // But we need to check if it's different from the current display
+                    updateLyricsFromTicker(line.value, getNextLine(line)?.value)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating lyrics", e)
+            }
+
+            // Continue the ticker
+            lyricHandler.postDelayed(this, 200)
+        }
+    }
+
+    private fun updateLyricsFromTicker(currentLyric: String?, nextLyric: String?) {
+        // Update lyrics display without the duplicate lastLyric check
+        // Just call the original updateLyrics method
+        updateLyrics(null, currentLyric, nextLyric)
+    }
+
+    private fun getNextLine(currentLine: Line): Line? {
+        val lyrics = currentLyrics?.structuredLyrics?.firstOrNull()?.line
+        if (lyrics.isNullOrEmpty()) return null
+        
+        val currentIndex = lyrics.indexOf(currentLine)
+        return if (currentIndex >= 0 && currentIndex < lyrics.size - 1) {
+            lyrics[currentIndex + 1]
+        } else {
+            null
         }
     }
 

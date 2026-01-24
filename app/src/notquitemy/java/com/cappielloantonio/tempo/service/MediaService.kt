@@ -16,6 +16,7 @@ import androidx.media3.exoplayer.trackselection.TrackSelectionArray
 import androidx.media3.session.*
 import androidx.media3.session.MediaSession.ControllerInfo
 import com.cappielloantonio.tempo.R
+import com.cappielloantonio.tempo.service.DesktopLyricsService
 import com.cappielloantonio.tempo.ui.activity.MainActivity
 import com.cappielloantonio.tempo.util.Constants
 import com.cappielloantonio.tempo.util.DownloadUtil
@@ -173,6 +174,12 @@ class MediaService : MediaLibraryService() {
 
                 if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK || reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
                     MediaManager.setLastPlayedTimestamp(mediaItem)
+                    
+                    // Send song changed action to DesktopLyricsService when transitioning to a new song
+                    val intent = Intent(this@MediaService, DesktopLyricsService::class.java)
+                    intent.action = DesktopLyricsService.ACTION_SONG_CHANGED
+                    intent.putExtra(DesktopLyricsService.EXTRA_SONG_ID, mediaItem.mediaId)
+                    startService(intent)
                 }
             }
 
