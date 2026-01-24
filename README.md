@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-    <a href="https://github.com/CappielloAntonio/tempo/releases"><img src="https://i.ibb.co/q0mdc4Z/get-it-on-github.png" width="200"></a>
+    <a href="https://github.com/sylser/tempo/releases"><img src="https://i.ibb.co/q0mdc4Z/get-it-on-github.png" width="200"></a>
 </p>
 <p align="center">
     <a href="https://f-droid.org/packages/com.cappielloantonio.notquitemy.tempo"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" width="200"></a>
