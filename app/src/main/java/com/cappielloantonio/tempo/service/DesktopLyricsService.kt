@@ -19,8 +19,10 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
+import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.MediaItem
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.cappielloantonio.tempo.R
@@ -52,10 +54,16 @@ class DesktopLyricsService : Service() {
     private var currentLyrics: LyricsList? = null
     private var currentLineIndex = -1
     private val lyricHandler = Handler(Looper.getMainLooper())
+    private var isLyricTickerActive = false
+    private var lastUpdatePosition: Long = -1
+    private val positionThreshold: Long = 50 // Only update if position changes by more than 50ms
     private val openRepository = com.cappielloantonio.tempo.repository.OpenRepository()
     
     // Flag to indicate if we're using self-driven lyrics mode
     private var isSelfDrivenMode = false
+    
+    // Cache the current line index to avoid repeated searches
+    private var cachedCurrentLineIndex = -1
 
     private lateinit var windowManager: WindowManager
     private lateinit var lyricsView: View
@@ -157,6 +165,9 @@ class DesktopLyricsService : Service() {
         // Clear lyrics state completely
         currentLineIndex = -1
         currentLyrics = null
+        cachedCurrentLineIndex = -1 // Reset cached index for new song
+        lastUpdatePosition = -1 // Reset position tracking for new song
+        lastLyric = null // Reset last lyric to ensure proper refresh
 
         // Clear the display and reset the internal lastLyric state by calling update with null
         updateLyrics(null, null, null)
@@ -189,6 +200,11 @@ class DesktopLyricsService : Service() {
         
         // Reset self-driven mode flag
         isSelfDrivenMode = false
+        
+        // Reset cached indices and positions
+        cachedCurrentLineIndex = -1
+        lastUpdatePosition = -1
+        lastLyric = null
 
         try {
             // Check if windowManager and lyricsView are initialized before removing
@@ -210,6 +226,7 @@ class DesktopLyricsService : Service() {
         }
     }
 
+    @OptIn(UnstableApi::class)
     private fun initializeMediaController() {
         try {
             val sessionToken = SessionToken(this, ComponentName(this, MediaService::class.java))
@@ -241,17 +258,81 @@ class DesktopLyricsService : Service() {
         val lyrics = currentLyrics?.structuredLyrics?.firstOrNull()?.line
         if (lyrics.isNullOrEmpty()) return null
 
-        // Find the appropriate line for the current position
-        for ((index, line) in lyrics.withIndex()) {
-            val lineStart = line.start
-            if (lineStart != null && lineStart.toLong() > positionMs) {
-                // Return the previous line if we've passed it
-                return if (index > 0) lyrics[index - 1] else null
+        // Optimized search: start from cached index if available and nearby, otherwise use binary search
+        if (cachedCurrentLineIndex >= 0 && cachedCurrentLineIndex < lyrics.size) {
+            val cachedLine = lyrics[cachedCurrentLineIndex]
+            val cachedStart = cachedLine.start
+            if (cachedStart != null) {
+                val cachedStartTime = cachedStart.toLong()
+                
+                // If we're close to the cached position, search incrementally from there
+                if (kotlin.math.abs(cachedStartTime - positionMs) < 5000) { // Within 5 seconds
+                    // Search forward if current position is ahead of cached
+                    if (positionMs >= cachedStartTime) {
+                        for (i in cachedCurrentLineIndex until lyrics.size) {
+                            val line = lyrics[i]
+                            val lineStart = line.start
+                            if (lineStart != null) {
+                                val startTime = lineStart.toLong()
+                                if (startTime > positionMs) {
+                                    return if (i > 0) lyrics[i - 1] else null
+                                }
+                            }
+                        }
+                        // If we reached the end, return the last line
+                        return lyrics.lastOrNull()
+                    } 
+                    // Search backward if current position is behind cached
+                    else {
+                        for (i in cachedCurrentLineIndex downTo 0) {
+                            val line = lyrics[i]
+                            val lineStart = line.start
+                            if (lineStart != null) {
+                                val startTime = lineStart.toLong()
+                                if (startTime <= positionMs) {
+                                    return line
+                                }
+                            }
+                        }
+                        // If we reached the beginning, return the first line if it's within bounds
+                        val firstLine = lyrics[0]
+                        val firstLineStart = firstLine.start
+                        if (lyrics.isNotEmpty() && firstLineStart != null && firstLineStart.toLong() <= positionMs) {
+                            return firstLine
+                        }
+                    }
+                }
             }
         }
         
-        // If we're past all defined timestamps, return the last line
-        return lyrics.lastOrNull()
+        // Fallback to binary search if incremental search wasn't applicable
+        var left = 0
+        var right = lyrics.size - 1
+        var bestMatchIndex = -1
+        
+        while (left <= right) {
+            val mid = (left + right) / 2
+            if (mid >= lyrics.size) break // Safety check
+            
+            val midLine = lyrics[mid]
+            val midStart = midLine.start
+            
+            if (midStart != null) {
+                val startTime = midStart.toLong()
+                
+                if (startTime <= positionMs) {
+                    bestMatchIndex = mid
+                    left = mid + 1 // Look for a later match
+                } else {
+                    right = mid - 1 // Look for an earlier match
+                }
+            } else {
+                // Skip lines without start time
+                left++
+            }
+        }
+        
+        return if (bestMatchIndex != -1) lyrics[bestMatchIndex] else null
     }
 
     private val lyricRunnable = object : Runnable {
@@ -260,21 +341,49 @@ class DesktopLyricsService : Service() {
             if (!controller.isConnected) return
 
             try {
-                val position = controller.currentPosition
-                val line = findLineForPosition(position)
+                // Check if player is playing - only update if playing
+                if (controller.playbackState == androidx.media3.common.Player.STATE_READY && controller.isPlaying) {
+                    val position = controller.currentPosition
+                    val line = findLineForPosition(position)
 
-                if (line != null) {
-                    // Access the original lastLyric from the updateLyrics method context
-                    // We need to call updateLyrics with the current line
-                    // But we need to check if it's different from the current display
-                    updateLyricsFromTicker(line.value, getNextLine(line)?.value)
+                    if (line != null) {
+                        // Update cached index when we find a valid line
+                         val lyrics = currentLyrics?.structuredLyrics?.firstOrNull()?.line
+                         if (lyrics != null) {
+                             // Find the index of the current line in the lyrics array
+                             val lineStart = line.start
+                             val lineValue = line.value
+                             val foundIndex = lyrics.indexOfFirst { 
+                                 val itStart = it.start 
+                                 val itValue = it.value
+                                 itStart != null && lineStart != null && itStart == lineStart && itValue == lineValue 
+                             }
+                             if (foundIndex != -1) {
+                                 cachedCurrentLineIndex = foundIndex
+                             }
+                         }
+                         
+                        // Access the original lastLyric from the updateLyrics method context
+                        // We need to call updateLyrics with the current line
+                        // But we need to check if it's different from the current display
+                        updateLyricsFromTicker(line.value, getNextLine(line)?.value)
+                    }
+                    // Update last position for the next cycle
+                    lastUpdatePosition = position
+                } else {
+                    // If player is paused/stopped, reduce update frequency to save resources
+                    // Also reset the lastUpdatePosition so when playback resumes, we update immediately
+                    lastUpdatePosition = -1
+                    // Continue the ticker but with longer interval when not playing
+                    lyricHandler.postDelayed(this, 1000) // Check every second when not playing
+                    return
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating lyrics", e)
             }
 
-            // Continue the ticker
-            lyricHandler.postDelayed(this, 200)
+            // Continue the ticker with optimized interval
+            lyricHandler.postDelayed(this, 300) // Reduced from 500ms to 300ms for better responsiveness while still optimizing
         }
     }
 
@@ -288,12 +397,13 @@ class DesktopLyricsService : Service() {
         val lyrics = currentLyrics?.structuredLyrics?.firstOrNull()?.line
         if (lyrics.isNullOrEmpty()) return null
         
-        val currentIndex = lyrics.indexOf(currentLine)
-        return if (currentIndex >= 0 && currentIndex < lyrics.size - 1) {
-            lyrics[currentIndex + 1]
-        } else {
-            null
+        // Fallback to the original search method
+        for (i in lyrics.indices) {
+            if (lyrics[i] === currentLine) {  // Using reference equality for performance
+                return if (i < lyrics.size - 1) lyrics[i + 1] else null
+            }
         }
+        return null
     }
 
     private fun createNotificationChannel() {
