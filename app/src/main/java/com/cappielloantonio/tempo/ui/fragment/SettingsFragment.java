@@ -97,12 +97,6 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         super.onStart();
         activity.setBottomNavigationBarVisibility(false);
         activity.setBottomSheetVisibility(false);
-        
-        // Add back button functionality to toolbar if it exists
-        if (activity.getSupportActionBar() != null) {
-            activity.getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            activity.getSupportActionBar().setDisplayShowHomeEnabled(true);
-        }
     }
 
     @Override
@@ -128,28 +122,36 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         actionDesktopLyrics();
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == android.R.id.home) {
-            // Navigate back to home fragment using NavController
-            if (activity.navController != null) {
-                // Navigate back to home fragment
-                activity.navController.navigate(R.id.action_settingsFragment_to_homeFragment);
-                return true;
-            }
-        }
-        return super.onOptionsItemSelected(item);
-    }
+
 
     @Override
     public void onStop() {
         super.onStop();
         activity.setBottomSheetVisibility(true);
     }
+    
+
 
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
         setPreferencesFromResource(R.xml.global_preferences, rootKey);
+        
+        // Add a back to home preference at the top
+        Preference backToHomePreference = new Preference(requireContext());
+        backToHomePreference.setTitle("返回主页"); // Chinese for "Return to Home"
+        backToHomePreference.setIcon(R.drawable.ic_arrow_back);
+        backToHomePreference.setOrder(-1000); // Set high priority to appear at the top
+        backToHomePreference.setOnPreferenceClickListener(preference -> {
+            // Navigate back to home
+            if (activity.navController != null) {
+                activity.navController.popBackStack(R.id.homeFragment, false);
+            }
+            return true;
+        });
+        
+        // Add the back preference to the first category or create a new category
+        getPreferenceScreen().addPreference(backToHomePreference);
+        
         ListPreference themePreference = findPreference(Preferences.THEME);
         if (themePreference != null) {
             themePreference.setOnPreferenceChangeListener(
