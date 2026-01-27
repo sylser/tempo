@@ -270,6 +270,8 @@ public class MainActivity extends BaseActivity {
                                 if (!isPlaying) {
                                     MediaManager.init(getMediaBrowserListenableFuture(), songs);
                                     if (getMediaBrowserListenableFuture() != null && getMediaBrowserListenableFuture().isDone()) {
+                                        // Force seek to beginning to avoid inheriting old position from previous session
+                                        Objects.requireNonNull(getMediaBrowserListenableFuture().get()).seekToDefaultPosition();
                                         Objects.requireNonNull(getMediaBrowserListenableFuture().get()).play();
                                     }
                                 }
