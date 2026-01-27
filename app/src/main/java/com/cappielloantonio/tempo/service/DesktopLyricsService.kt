@@ -62,6 +62,12 @@ class DesktopLyricsService : Service() {
     // Flag to indicate if we're using self-driven lyrics mode
     private var isSelfDrivenMode = false
     
+    // Persistent state variable for desktop lyrics enabled status
+    private var desktopLyricsEnabled = false
+    
+    // Store current song ID to ensure we load lyrics for the current song when re-enabling
+    private var currentSongId: String? = null
+    
     // Cache the current line index to avoid repeated searches
     private var cachedCurrentLineIndex = -1
 
@@ -115,6 +121,9 @@ class DesktopLyricsService : Service() {
         startForeground(NOTIFICATION_ID, createNotification())
         initializeLyricsView()
         initializeMediaController()
+        
+        // Initialize desktop lyrics enabled state from preferences
+        desktopLyricsEnabled = Preferences.isDesktopLyricsEnabled()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -123,6 +132,10 @@ class DesktopLyricsService : Service() {
             if (action != null) {
                 when (action) {
                     ACTION_UPDATE_LYRICS -> {
+                        // Switch guard: if desktop lyrics are disabled, don't update UI
+                        if (!desktopLyricsEnabled) {
+                            return START_NOT_STICKY
+                        }
                         // Only process external lyrics updates if not in self-driven mode
                         if (!isSelfDrivenMode) {
                             val prevLyric = intent.getStringExtra(EXTRA_PREV_LYRIC)
@@ -134,7 +147,16 @@ class DesktopLyricsService : Service() {
                     ACTION_SONG_CHANGED -> {
                         val songId = intent.getStringExtra(EXTRA_SONG_ID)
                         if (songId != null) {
-                            handleSongChange(songId)
+                            // Always update song context regardless of desktopLyricsEnabled state
+                            updateSongContext(songId)
+                            
+                            // Only update UI if desktop lyrics are enabled
+                            if (desktopLyricsEnabled) {
+                                handleSongChangeWithUIUpdate(songId)
+                            } else {
+                                // Even when disabled, make sure everything is stopped and hidden
+                                stopLyricTickerAndHideLyrics()
+                            }
                         }
                     }
                     ACTION_UPDATE_SETTINGS -> {
@@ -142,6 +164,51 @@ class DesktopLyricsService : Service() {
                         updateOpacity()
                         updateFontColor()
                         updateLockState()
+                        
+                        // Get the most recent preference for desktop lyrics enabled status
+                        val newDesktopLyricsEnabled = Preferences.isDesktopLyricsEnabled()
+                        
+                        // Update the persistent state variable
+                        desktopLyricsEnabled = newDesktopLyricsEnabled
+                        
+                        if (newDesktopLyricsEnabled) {
+                            // If enabled: don't just resume ticker, but load lyrics for current song
+                            if (currentSongId != null) {
+                                // Load lyrics for the current song instead of resuming with old state
+                                handleSongChangeWithUIUpdate(currentSongId!!)
+                            } else {
+                                // If no current song ID is known, just start the ticker if needed
+                                if (!isLyricTickerActive && isSelfDrivenMode) {
+                                    startLyricTicker()
+                                }
+                            }
+                        } else {
+                            // If disabled: stop lyricHandler, clear lyrics state, and hide view
+                            lyricHandler.removeCallbacksAndMessages(null)
+                            
+                            // Clear lyrics state
+                            currentLyrics = null
+                            lastLyric = null
+                            currentLineIndex = -1
+                            cachedCurrentLineIndex = -1
+                            lastUpdatePosition = -1
+                            
+                            // Explicitly hide the entire lyrics view
+                            if (::lyricsView.isInitialized) {
+                                lyricsView.visibility = View.GONE
+                            }
+                            
+                            // Clear text from all lyric text views
+                            if (::currentLyricsTextView.isInitialized) {
+                                currentLyricsTextView.text = ""
+                            }
+                            if (::prevLyricsTextView.isInitialized) {
+                                prevLyricsTextView.text = ""
+                            }
+                            if (::nextLyricsTextView.isInitialized) {
+                                nextLyricsTextView.text = ""
+                            }
+                        }
                     }
                 }
             }
@@ -156,6 +223,66 @@ class DesktopLyricsService : Service() {
     }
 
     private fun handleSongChange(songId: String) {
+        // First check if desktop lyrics are enabled before proceeding
+        if (!desktopLyricsEnabled) {
+            // If disabled, make sure everything is stopped and hidden
+            stopLyricTickerAndHideLyrics()
+            return
+        }
+        
+        // Update current song ID
+        currentSongId = songId
+        
+        // Activate self-driven mode
+        isSelfDrivenMode = true
+        
+        // Stop the old ticker immediately to prevent further updates
+        lyricHandler.removeCallbacks(lyricRunnable)
+
+        // Clear lyrics state completely
+        currentLineIndex = -1
+        currentLyrics = null
+        cachedCurrentLineIndex = -1 // Reset cached index for new song
+        lastUpdatePosition = -1 // Reset position tracking for new song
+        lastLyric = null // Reset last lyric to ensure proper refresh
+
+        // Clear the display and reset the internal lastLyric state by calling update with null
+        updateLyrics(null, null, null)
+
+        // Small delay to ensure old lyrics are cleared before loading new ones
+        lyricHandler.postDelayed({
+            // Load new song lyrics after clearing old ones
+            loadLyricsForSong(songId)
+        }, 200) // 200ms delay to ensure smooth transition
+    }
+    
+    private fun updateSongContext(songId: String) {
+        // Always update the song context regardless of whether lyrics are enabled
+        // This ensures that when lyrics are re-enabled, they reflect the current song
+        
+        // Update current song ID
+        currentSongId = songId
+        
+        // Activate self-driven mode
+        isSelfDrivenMode = true
+        
+        // Stop the old ticker immediately to prevent further updates
+        lyricHandler.removeCallbacks(lyricRunnable)
+
+        // Clear lyrics state completely (but don't update UI)
+        currentLineIndex = -1
+        currentLyrics = null
+        cachedCurrentLineIndex = -1 // Reset cached index for new song
+        lastUpdatePosition = -1 // Reset position tracking for new song
+        lastLyric = null // Reset last lyric to ensure proper refresh
+    }
+    
+    private fun handleSongChangeWithUIUpdate(songId: String) {
+        // This method handles the full song change with UI updates
+        
+        // Update current song ID
+        currentSongId = songId
+        
         // Activate self-driven mode
         isSelfDrivenMode = true
         
@@ -184,7 +311,7 @@ class DesktopLyricsService : Service() {
         Log.d(TAG, "onDestroy: DesktopLyricsService is being destroyed")
         
         // Clean up the lyrics ticker
-        lyricHandler.removeCallbacks(lyricRunnable)
+        lyricHandler.removeCallbacksAndMessages(null)
         
         // Release MediaController
         try {
@@ -200,6 +327,9 @@ class DesktopLyricsService : Service() {
         
         // Reset self-driven mode flag
         isSelfDrivenMode = false
+        
+        // Reset desktop lyrics enabled flag
+        desktopLyricsEnabled = false
         
         // Reset cached indices and positions
         cachedCurrentLineIndex = -1
@@ -335,6 +465,43 @@ class DesktopLyricsService : Service() {
         return if (bestMatchIndex != -1) lyrics[bestMatchIndex] else null
     }
 
+    private fun startLyricTicker() {
+        if (!isLyricTickerActive) {
+            lyricHandler.postDelayed(lyricRunnable, 300)
+            isLyricTickerActive = true
+        }
+    }
+
+    private fun stopLyricTickerAndHideLyrics() {
+        if (isLyricTickerActive) {
+            lyricHandler.removeCallbacks(lyricRunnable)
+            isLyricTickerActive = false
+        }
+        
+        // Always hide the lyrics view and clear text to prevent showing default "No lyrics available"
+        if (::lyricsView.isInitialized && lyricsView.visibility == View.VISIBLE) {
+            lyricsView.visibility = View.GONE
+        }
+        
+        // Clear text from all lyric text views to ensure no default text is shown
+        if (::currentLyricsTextView.isInitialized) {
+            currentLyricsTextView.text = ""
+        }
+        if (::prevLyricsTextView.isInitialized) {
+            prevLyricsTextView.text = ""
+        }
+        if (::nextLyricsTextView.isInitialized) {
+            nextLyricsTextView.text = ""
+        }
+        
+        // Clear the current lyrics state
+        currentLyrics = null
+        currentLineIndex = -1
+        cachedCurrentLineIndex = -1
+        lastUpdatePosition = -1
+        lastLyric = null
+    }
+
     private val lyricRunnable = object : Runnable {
         override fun run() {
             val controller = mediaController ?: return
@@ -389,7 +556,10 @@ class DesktopLyricsService : Service() {
 
     private fun updateLyricsFromTicker(currentLyric: String?, nextLyric: String?) {
         // Update lyrics display without the duplicate lastLyric check
-        // Just call the original updateLyrics method
+        // First check if desktop lyrics are enabled before calling updateLyrics
+        if (!desktopLyricsEnabled) {
+            return
+        }
         updateLyrics(null, currentLyric, nextLyric)
     }
 
@@ -621,6 +791,25 @@ class DesktopLyricsService : Service() {
     }
     private var lastLyric: String? = null
     fun updateLyrics(prevLyric: String?, currentLyric: String?, nextLyric: String?) {
+        
+        // 首先检查桌面歌词是否已启用，如果未启用则不显示任何歌词
+        if (!desktopLyricsEnabled) {
+            // 如果歌词视图是可见的，隐藏它并清空文本
+            if (::lyricsView.isInitialized && lyricsView.visibility == View.VISIBLE) {
+                lyricsView.visibility = View.GONE
+            }
+            // 清空所有文本视图
+            if (::currentLyricsTextView.isInitialized) {
+                currentLyricsTextView.text = ""
+            }
+            if (::prevLyricsTextView.isInitialized) {
+                prevLyricsTextView.text = ""
+            }
+            if (::nextLyricsTextView.isInitialized) {
+                nextLyricsTextView.text = ""
+            }
+            return
+        }
 
         // 没有歌词 → 只处理显隐一次
         if (currentLyric == null) {

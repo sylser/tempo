@@ -21,6 +21,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.view.MenuItem;
 
 import androidx.core.content.ContextCompat;
 
@@ -96,6 +97,12 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         super.onStart();
         activity.setBottomNavigationBarVisibility(false);
         activity.setBottomSheetVisibility(false);
+        
+        // Add back button functionality to toolbar if it exists
+        if (activity.getSupportActionBar() != null) {
+            activity.getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            activity.getSupportActionBar().setDisplayShowHomeEnabled(true);
+        }
     }
 
     @Override
@@ -119,6 +126,19 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         actionDeleteDownloadStorage();
         actionKeepScreenOn();
         actionDesktopLyrics();
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == android.R.id.home) {
+            // Navigate back to home fragment using NavController
+            if (activity.navController != null) {
+                // Navigate back to home fragment
+                activity.navController.navigate(R.id.action_settingsFragment_to_homeFragment);
+                return true;
+            }
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -368,13 +388,22 @@ public class SettingsFragment extends PreferenceFragmentCompat {
                 Preferences.setDesktopLyricsEnabled(enabled);
                 if (enabled) {
                     if (OverlayPermissionUtil.hasOverlayPermission(requireContext())) {
+                        // Start the service if it's not already running
                         OverlayPermissionUtil.startDesktopLyricsService(requireContext());
+                        // Also send an update settings intent to ensure it's properly enabled
+                        Intent intent = new Intent(requireContext(), DesktopLyricsService.class);
+                        intent.setAction(DesktopLyricsService.ACTION_UPDATE_SETTINGS);
+                        requireContext().startService(intent);
                     } else {
                         OverlayPermissionUtil.requestOverlayPermission(activity, 1001);
                         return false;
                     }
                 } else {
                     OverlayPermissionUtil.stopDesktopLyricsService(requireContext());
+                    // Also send an update settings intent to ensure it's properly disabled
+                    Intent intent = new Intent(requireContext(), DesktopLyricsService.class);
+                    intent.setAction(DesktopLyricsService.ACTION_UPDATE_SETTINGS);
+                    requireContext().startService(intent);
                 }
             }
             return true;
