@@ -19,6 +19,7 @@ public class App extends Application {
     private static Subsonic subsonic;
     private static Github github;
     private static SharedPreferences preferences;
+    private static boolean isColdStart = true;
 
     @Override
     public void onCreate() {
@@ -73,6 +74,14 @@ public class App extends Application {
 
     public static void refreshSubsonicClient() {
         subsonic = getSubsonicClient();
+    }
+
+    public static boolean consumeColdStart() {
+        if (isColdStart) {
+            isColdStart = false;
+            return true;
+        }
+        return false;
     }
 
     private static Subsonic getSubsonicClient() {

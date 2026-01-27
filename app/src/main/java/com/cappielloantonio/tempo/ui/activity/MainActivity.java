@@ -253,29 +253,32 @@ public class MainActivity extends BaseActivity {
 
         getMediaBrowserListenableFuture().addListener(() -> {
             try {
-                // Auto start random play on app launch
-                SongRepository songRepository = new SongRepository();
-                songRepository.getRandomSample(20, null, null).observe(MainActivity.this, songs -> {
-                    try {
-                        if (songs != null && !songs.isEmpty()) {
-                            // Check if music is already playing
-                            boolean isPlaying = false;
-                            if (getMediaBrowserListenableFuture() != null && getMediaBrowserListenableFuture().isDone()) {
-                                isPlaying = Objects.requireNonNull(getMediaBrowserListenableFuture().get()).isPlaying();
-                            }
-                            
-                            // Only start random play if music is not already playing
-                            if (!isPlaying) {
-                                MediaManager.init(getMediaBrowserListenableFuture(), songs);
+                // Only auto-start random play on cold start (first app launch after process creation)
+                if (App.consumeColdStart()) {
+                    // Auto start random play on app launch
+                    SongRepository songRepository = new SongRepository();
+                    songRepository.getRandomSample(20, null, null).observe(MainActivity.this, songs -> {
+                        try {
+                            if (songs != null && !songs.isEmpty()) {
+                                // Check if music is already playing
+                                boolean isPlaying = false;
                                 if (getMediaBrowserListenableFuture() != null && getMediaBrowserListenableFuture().isDone()) {
-                                    Objects.requireNonNull(getMediaBrowserListenableFuture().get()).play();
+                                    isPlaying = Objects.requireNonNull(getMediaBrowserListenableFuture().get()).isPlaying();
+                                }
+                                
+                                // Only start random play if music is not already playing
+                                if (!isPlaying) {
+                                    MediaManager.init(getMediaBrowserListenableFuture(), songs);
+                                    if (getMediaBrowserListenableFuture() != null && getMediaBrowserListenableFuture().isDone()) {
+                                        Objects.requireNonNull(getMediaBrowserListenableFuture().get()).play();
+                                    }
                                 }
                             }
+                        } catch (ExecutionException | InterruptedException e) {
+                            e.printStackTrace();
                         }
-                    } catch (ExecutionException | InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                });
+                    });
+                }
 
                 Objects.requireNonNull(getMediaBrowserListenableFuture().get()).addListener(new Player.Listener() {
                     @Override
