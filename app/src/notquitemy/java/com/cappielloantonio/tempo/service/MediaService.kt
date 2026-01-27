@@ -199,6 +199,19 @@ class MediaService : MediaLibraryService() {
                     )
                 } else {
                     MediaManager.scrobble(player.currentMediaItem, false)
+                    
+                    // Send update to DesktopLyricsService when playback starts
+                    // Check if desktop lyrics are enabled before sending update
+                    if (Preferences.isDesktopLyricsEnabled()) {
+                        val intent = Intent(this@MediaService, DesktopLyricsService::class.java)
+                        intent.action = DesktopLyricsService.ACTION_UPDATE_LYRICS
+                        if (player.currentMediaItem != null) {
+                            intent.putExtra(DesktopLyricsService.EXTRA_SONG_ID,
+                                player.currentMediaItem?.mediaId
+                            )
+                        }
+                        startService(intent)
+                    }
                 }
             }
 

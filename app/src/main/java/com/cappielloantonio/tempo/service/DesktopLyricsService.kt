@@ -136,12 +136,32 @@ class DesktopLyricsService : Service() {
                         if (!desktopLyricsEnabled) {
                             return START_NOT_STICKY
                         }
-                        // Only process external lyrics updates if not in self-driven mode
-                        if (!isSelfDrivenMode) {
-                            val prevLyric = intent.getStringExtra(EXTRA_PREV_LYRIC)
-                            val currentLyric = intent.getStringExtra(EXTRA_CURRENT_LYRIC)
-                            val nextLyric = intent.getStringExtra(EXTRA_NEXT_LYRIC)
-                            updateLyrics(prevLyric, currentLyric, nextLyric)
+                        
+                        // Handle different types of UPDATE_LYRICS actions:
+                        // 1. With explicit lyrics data (existing behavior)
+                        // 2. With just song ID (for play button scenario) - switch to self-driven mode
+                        val prevLyric = intent.getStringExtra(EXTRA_PREV_LYRIC)
+                        val currentLyric = intent.getStringExtra(EXTRA_CURRENT_LYRIC)
+                        val nextLyric = intent.getStringExtra(EXTRA_NEXT_LYRIC)
+                        
+                        if (prevLyric != null || currentLyric != null || nextLyric != null) {
+                            // Existing behavior: process external lyrics update if not in self-driven mode
+                            if (!isSelfDrivenMode) {
+                                updateLyrics(prevLyric, currentLyric, nextLyric)
+                            }
+                        } else {
+                            // New behavior: when just a song ID is provided (like from play button),
+                            // load the current song's lyrics in self-driven mode
+                            val songId = intent.getStringExtra(EXTRA_SONG_ID)
+                            if (songId != null) {
+                                // Switch to self-driven mode and load lyrics for the current song
+                                handleSongChangeWithUIUpdate(songId)
+                            } else {
+                                // If no lyrics data or song ID provided, just ensure ticker is active if needed
+                                if (isSelfDrivenMode && !isLyricTickerActive) {
+                                    startLyricTicker()
+                                }
+                            }
                         }
                     }
                     ACTION_SONG_CHANGED -> {
